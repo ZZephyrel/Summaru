@@ -1,0 +1,15 @@
+{
+  "name": "sumaru",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@google/genai": "^1.22.0",
+    "discord.js": "^14.22.1",
+    "dotenv": "^16.5.0"
+  }
+}
