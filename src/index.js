@@ -449,7 +449,7 @@ client.on('interactionCreate', async interaction => {
                 return;
             }
 
-            formattedHistory = formatChatHistoryByDay(chatHistory, client);
+            const formattedHistory = formatChatHistoryByDay(chatHistory, client);
 
             let prompt;
             let systemInstructionToUse;
