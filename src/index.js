@@ -9,6 +9,7 @@ const {
     safetySettingsConfig,
     RATE_LIMIT_KEYWORDS,
     TEMPERATURE,
+    MAX_OUTPUT_TOKENS,
     GROUNDING_TOOL,
     MODEL_SHORT_COOLDOWN_MS,
     MODEL_LONG_COOLDOWN_MS,
@@ -491,7 +492,7 @@ client.on('interactionCreate', async interaction => {
                         contents: prompt,
                         config: {
                             systemInstruction: systemInstructionToUse,
-                            // maxOutputTokens: 4000,
+                            maxOutputTokens: MAX_OUTPUT_TOKENS,
                             temperature: TEMPERATURE,
                             safetySettings: safetySettingsConfig,
                             tools: [GROUNDING_TOOL],

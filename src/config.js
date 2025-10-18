@@ -39,6 +39,7 @@ const RATE_LIMIT_KEYWORDS = ['429', 'RESOURCE_EXHAUSTED', '503', 'OVERLOADED'];
 
 // --- MODEL PARAMETERS ---
 const TEMPERATURE = 0.5; // Controls the creativity of the model's responses.
+const MAX_OUTPUT_TOKENS = 4000; // Upper limit on response tokens, important for latency and cost management.
 const GROUNDING_TOOL = { googleSearch: {} }; // Enables the AI to use Google Search to answer questions with up-to-date information.
 const MODEL_SHORT_COOLDOWN_MS = 60 * 1000; // Short penalty applied to a model after a single rate-limit failure, meant to handle per minute limits.
 const MODEL_LONG_COOLDOWN_MS = 6 * 60 * 60 * 1000; // Long penalty applied to a model after repeated rate-limit failures.
@@ -160,6 +161,7 @@ module.exports = {
     safetySettingsConfig,
     RATE_LIMIT_KEYWORDS,
     TEMPERATURE,
+    MAX_OUTPUT_TOKENS,
     GROUNDING_TOOL,
     MODEL_SHORT_COOLDOWN_MS,
     MODEL_LONG_COOLDOWN_MS,
