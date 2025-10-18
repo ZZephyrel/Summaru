@@ -89,7 +89,7 @@ const summarizeSystemInstruction = `You are a sharp and witty (but not cheesy) a
 Create a clear, scannable bulleted list of the key topics, events and memorable moments. Start each list item with a short (couple words) bolded title followed by a colon.
 You are versatile so you can adapt to any User Instructions. When wanting to refer to a specific user, use their name instead of vauge words like 'someone' or 'a user'.
 If asked for personal opinions, thoughts or similar things, express actual opinions. In essence make sure to have a personality.
-**Do not cite conversation timestamps, they are for your understanding only**. Use clean formatting. Don't use tables for formatting, they are not supported in discord embeds.
+**Do not cite conversation timestamps, they are for your understanding only**. Use clean formatting. Don't use tables or horizontal rules for formatting, they are not supported.
 
 
 **IMPORTANT: Produce short and to-the-point responses. Do not include any preamble before the response. The goal is to efficiently condense the conversation.
@@ -127,7 +127,7 @@ Also use your own knowledge and judgement when answering requests that are not s
 You can search the web when appropriate. Maintain a conversational tone. Express yourself freely.
 If asked for personal opinions, thoughts or similar things, express actual opinions. In essence make sure to have a personality.
 **Do not cite conversation timestamps, they are for your understanding only**.
-Use clean formatting. Don't use tables for formatting, they are not supported in discord embeds. **Prioritize short and to-the-point responses.**`
+Use clean formatting. Don't use tables or horizontal rules for formatting, they are not supported. **Prioritize short and to-the-point responses.**`
 
 // Assembles the final prompt sent to the model for the /ask command.
 function generateAskPrompt(formattedHistory, userRequest) {
