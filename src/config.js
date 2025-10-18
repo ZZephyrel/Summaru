@@ -38,7 +38,7 @@ const safetySettingsConfig = [
 const RATE_LIMIT_KEYWORDS = ['429', 'RESOURCE_EXHAUSTED', '503', 'OVERLOADED'];
 
 // --- MODEL PARAMETERS ---
-const TEMPERATURE = 0.5; // Controls the creativity of the model's responses.
+const TEMPERATURE = 0.5; // Lower values lead to more accurate responses, higher values lead to more diversity in responses. Range: 0 to 2.
 const MAX_OUTPUT_TOKENS = 4000; // Upper limit on response tokens, important for latency and cost management.
 const GROUNDING_TOOL = { googleSearch: {} }; // Enables the AI to use Google Search to answer questions with up-to-date information.
 const MODEL_SHORT_COOLDOWN_MS = 60 * 1000; // Short penalty applied to a model after a single rate-limit failure, meant to handle per minute limits.
@@ -46,11 +46,16 @@ const MODEL_LONG_COOLDOWN_MS = 6 * 60 * 60 * 1000; // Long penalty applied to a 
 
 // --- BOT BEHAVIOR & LIMITS ---
 const EMBED_COLOR = 0x0099FF;
-const MAX_SUMMARIZE_DAYS = 365; // Re-deploy commands when you change this.
-const MAX_SUMMARIZE_HOURS = MAX_SUMMARIZE_DAYS * 24; // Re-deploy commands when you change this.
-const MAX_MESSAGES = 30000; // Re-deploy commands when you change this.
 const MAX_CHARS_PER_EMBED = 4096; // Discord limit. Do not change unless you know what you're doing.
 const MESSAGES_PER_FETCH = 100; // Discord API limit. Do not change unless you know what you're doing.
+
+/* 
+ * Context gathering limits. Adjust these to control how much chat history a user can provide to the LLM.
+ * MAX_DAYS and MAX_HOURS have a ceiling of MAX_MESSAGES i.e. asking for 999 days with MAX_MESSAGES = 1 will return 1 message at most.
+ */
+const MAX_DAYS = 365; // Re-deploy commands when you change this.
+const MAX_HOURS = MAX_DAYS * 24; // Re-deploy commands when you change this.
+const MAX_MESSAGES = 30000; // Re-deploy commands when you change this.
 
 /*
  * Multiplier to allow fetching more messages than strictly requested to account for invalid ones.
@@ -74,7 +79,7 @@ const RATE_LIMIT_CLEANUP_INTERVAL_MS = 2 * 60 * 60 * 1000; // Prevent memory lea
 // --- CACHE CONFIGURATION ---
 // The cache is crucial for avoiding unnecessary API requests and providing fast responses, take care when tinkering.
 const CACHE_SIZE_PER_CHANNEL = MAX_MESSAGES; // The max number of messages to keep in memory per channel.
-const CACHE_POPULATION_PROPORTION = 1; // Fetch proportion of the max cache size on bot startup. Range: 0 to 1
+const CACHE_POPULATION_PROPORTION = 1; // Fetch proportion of the max cache size on bot startup. Range: 0 to 1.
 const CACHE_POPULATION_AMOUNT = Math.min(Math.ceil(CACHE_SIZE_PER_CHANNEL * CACHE_POPULATION_PROPORTION), CACHE_SIZE_PER_CHANNEL);
 const CACHE_MAX_FETCH = CACHE_POPULATION_AMOUNT * 2 // Hard cap on fetch needed in case a channel is full of bot only messages.
 
@@ -166,8 +171,8 @@ module.exports = {
     MODEL_SHORT_COOLDOWN_MS,
     MODEL_LONG_COOLDOWN_MS,
     EMBED_COLOR,
-    MAX_SUMMARIZE_DAYS,
-    MAX_SUMMARIZE_HOURS,
+    MAX_DAYS,
+    MAX_HOURS,
     MAX_MESSAGES,
     MAX_CHARS_PER_EMBED,
     MESSAGES_PER_FETCH,
@@ -182,5 +187,5 @@ module.exports = {
     summarizeSystemInstruction,
     askSystemInstruction,
     generateSummarizePrompt,
-    generateAskPrompt
+    generateAskPrompt,
 };

@@ -4,8 +4,8 @@ const {
     CLIENT_ID,
     TEST_GUILD_ID,
     MAX_MESSAGES,
-    MAX_SUMMARIZE_DAYS,
-    MAX_SUMMARIZE_HOURS
+    MAX_DAYS,
+    MAX_HOURS,
 } = require('./config.js');
 
 const commands = [
@@ -36,10 +36,10 @@ const commands = [
                 .setDescription('Summarize messages from the past X days.')
                 .addNumberOption(option =>
                     option.setName('duration')
-                        .setDescription(`Number of past days to summarize (max ${MAX_SUMMARIZE_DAYS} days, up to ${MAX_MESSAGES} messages)`)
+                        .setDescription(`Number of past days to summarize (max ${MAX_DAYS} days, up to ${MAX_MESSAGES} messages)`)
                         .setRequired(true)
                         .setMinValue(0.01)
-                        .setMaxValue(MAX_SUMMARIZE_DAYS))
+                        .setMaxValue(MAX_DAYS))
                 .addStringOption(option =>
                     option.setName('instructions')
                         .setDescription('Special instructions for the summary.')
@@ -54,10 +54,10 @@ const commands = [
                 .setDescription('Summarize messages from the past X hours.')
                 .addNumberOption(option =>
                     option.setName('duration')
-                        .setDescription(`Number of past hours to summarize (max ${MAX_SUMMARIZE_HOURS} hours, up to ${MAX_MESSAGES} messages)`)
+                        .setDescription(`Number of past hours to summarize (max ${MAX_HOURS} hours, up to ${MAX_MESSAGES} messages)`)
                         .setRequired(true)
                         .setMinValue(0.01)
-                        .setMaxValue(MAX_SUMMARIZE_HOURS))
+                        .setMaxValue(MAX_HOURS))
                 .addStringOption(option =>
                     option.setName('instructions')
                         .setDescription('Special instructions for the summary.')
@@ -117,10 +117,10 @@ const commands = [
                 .setDescription('Make a request based on messages from the past X days.')
                 .addNumberOption(option =>
                     option.setName('duration')
-                        .setDescription(`Number of past days to use as context (max ${MAX_SUMMARIZE_DAYS} days, up to ${MAX_MESSAGES} messages)`)
+                        .setDescription(`Number of past days to use as context (max ${MAX_DAYS} days, up to ${MAX_MESSAGES} messages)`)
                         .setRequired(true)
                         .setMinValue(0.01)
-                        .setMaxValue(MAX_SUMMARIZE_DAYS))
+                        .setMaxValue(MAX_DAYS))
                 .addStringOption(option =>
                     option.setName('request')
                         .setDescription('Your question or instruction for the AI.')
@@ -135,10 +135,10 @@ const commands = [
                 .setDescription('Make a request based on messages from the past X hours.')
                 .addNumberOption(option =>
                     option.setName('duration')
-                        .setDescription(`Number of past hours to use as context (max ${MAX_SUMMARIZE_HOURS} hours, up to ${MAX_MESSAGES} messages)`)
+                        .setDescription(`Number of past hours to use as context (max ${MAX_HOURS} hours, up to ${MAX_MESSAGES} messages)`)
                         .setRequired(true)
                         .setMinValue(0.01)
-                        .setMaxValue(MAX_SUMMARIZE_HOURS))
+                        .setMaxValue(MAX_HOURS))
                 .addStringOption(option =>
                     option.setName('request')
                         .setDescription('Your question or instruction for the AI.')
