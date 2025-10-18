@@ -41,8 +41,8 @@ const RATE_LIMIT_KEYWORDS = ['429', 'RESOURCE_EXHAUSTED', '503', 'OVERLOADED'];
 const TEMPERATURE = 0.5; // Lower values lead to more accurate responses, higher values lead to more diversity in responses. Range: 0 to 2.
 const MAX_OUTPUT_TOKENS = 4000; // Upper limit on response tokens, important for latency and cost management.
 const GROUNDING_TOOL = { googleSearch: {} }; // Enables the AI to use Google Search to answer questions with up-to-date information.
-const MODEL_SHORT_COOLDOWN_MS = 60 * 1000; // Short penalty applied to a model after a single rate-limit failure, meant to handle per minute limits.
-const MODEL_LONG_COOLDOWN_MS = 6 * 60 * 60 * 1000; // Long penalty applied to a model after repeated rate-limit failures.
+const MODEL_SHORT_COOLDOWN_MS = 1.2 * 60 * 1000; // Short penalty applied to a model after a single rate-limit failure, meant to handle per minute limits.
+const MODEL_LONG_COOLDOWN_MS = 3 * 60 * 60 * 1000; // Long penalty applied to a model after repeated rate-limit failures.
 
 // --- BOT BEHAVIOR & LIMITS ---
 const EMBED_COLOR = 0x0099FF;
@@ -72,8 +72,8 @@ const FETCH_BUFFER_MULTIPLIER = 1.5;
 const FETCH_LOWER_LIMIT = 2000;
 
 // --- USER-FACING RATE LIMITS ---
-const USER_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
-const USER_RATE_LIMIT_COUNT = 30; // Max commands per user within the window timeframe.
+const USER_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // Sliding window timeframe.
+const USER_RATE_LIMIT_COUNT = 15; // Max commands per user within the window timeframe.
 const RATE_LIMIT_CLEANUP_INTERVAL_MS = 2 * 60 * 60 * 1000; // Prevent memory leaks.
 
 // --- CACHE CONFIGURATION ---
