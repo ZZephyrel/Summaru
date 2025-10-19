@@ -1,4 +1,5 @@
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
 // --- CORE SECRETS ---
 // These are loaded from your .env file. Do not hard-code them here.
@@ -157,7 +158,7 @@ function generateAskPrompt(formattedHistory, userRequest) {
     return prompt;
 }
 
-module.exports = {
+export {
     DISCORD_TOKEN,
     GEMINI_API_KEY,
     CLIENT_ID,
@@ -171,11 +172,11 @@ module.exports = {
     MODEL_SHORT_COOLDOWN_MS,
     MODEL_LONG_COOLDOWN_MS,
     EMBED_COLOR,
+    MAX_CHARS_PER_EMBED,
+    MESSAGES_PER_FETCH,
     MAX_DAYS,
     MAX_HOURS,
     MAX_MESSAGES,
-    MAX_CHARS_PER_EMBED,
-    MESSAGES_PER_FETCH,
     FETCH_BUFFER_MULTIPLIER,
     FETCH_LOWER_LIMIT,
     USER_RATE_LIMIT_COUNT,

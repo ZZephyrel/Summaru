@@ -1,12 +1,5 @@
-const { REST, Routes, SlashCommandBuilder } = require('discord.js');
-const {
-    DISCORD_TOKEN,
-    CLIENT_ID,
-    TEST_GUILD_ID,
-    MAX_MESSAGES,
-    MAX_DAYS,
-    MAX_HOURS,
-} = require('./config.js');
+import { DISCORD_TOKEN, CLIENT_ID, TEST_GUILD_ID, MAX_MESSAGES, MAX_DAYS, MAX_HOURS } from './config.js';
+import { REST, Routes, SlashCommandBuilder } from 'discord.js';
 
 const commands = [
     new SlashCommandBuilder()

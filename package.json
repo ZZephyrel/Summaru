@@ -1,9 +1,11 @@
 {
-  "name": "sumaru",
+  "name": "summaru",
+  "version": "1.0.0",
+  "type": "module",
+  "license": "MIT",
   "scripts": {
     "start": "node src/index.js"
   },
-  "license": "MIT",
   "engines": {
     "node": ">=20.0.0"
   },

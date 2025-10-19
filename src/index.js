@@ -1,8 +1,4 @@
-const { performance } = require('perf_hooks');
-const { Client, GatewayIntentBits, Partials, Options, Collection, EmbedBuilder, LimitedCollection, MessageFlags, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
-const { GoogleGenAI } = require("@google/genai");
-const { isValidMessage, createMinimalMessage, formatChatHistoryByDay } = require('./utils.js');
-const {
+import {
     DISCORD_TOKEN,
     GEMINI_API_KEY,
     models,
@@ -14,9 +10,9 @@ const {
     MODEL_SHORT_COOLDOWN_MS,
     MODEL_LONG_COOLDOWN_MS,
     EMBED_COLOR,
-    MAX_MESSAGES,
     MAX_CHARS_PER_EMBED,
     MESSAGES_PER_FETCH,
+    MAX_MESSAGES,
     FETCH_BUFFER_MULTIPLIER,
     FETCH_LOWER_LIMIT,
     USER_RATE_LIMIT_COUNT,
@@ -29,7 +25,11 @@ const {
     askSystemInstruction,
     generateSummarizePrompt,
     generateAskPrompt,
-} = require('./config.js');
+} from './config.js';
+import { performance } from 'perf_hooks';
+import { Client, GatewayIntentBits, Partials, Options, Collection, EmbedBuilder, LimitedCollection, MessageFlags, ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
+import { GoogleGenAI } from "@google/genai";
+import { isValidMessage, createMinimalMessage, formatChatHistoryByDay } from './utils.js';
 
 if (!DISCORD_TOKEN || !GEMINI_API_KEY) {
     console.error("Missing DISCORD_TOKEN or GEMINI_API_KEY in .env file.");

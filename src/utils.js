@@ -91,7 +91,7 @@ function formatChatHistoryByDay(chatHistory, client) {
     return formattedLines.join('\n').trim();
 }
 
-module.exports = {
+export {
     isValidMessage,
     createMinimalMessage,
     formatChatHistoryByDay,
