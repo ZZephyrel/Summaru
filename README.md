@@ -7,7 +7,7 @@
 ![dotenv](https://img.shields.io/badge/dotenv-16.5.0-blue.svg)
 <a href="https://ko-fi.com/zzephyrel">![Support](https://img.shields.io/static/v1?label=♥&message=Support&color=EA4AAA&style=flat)</a>
 
-**Summaru** is a Discord application that brings the power of a Large Language Model into your server. It can summarize conversations, answer questions and fulfill any request with full chat context and web search capabilities.
+**Summaru** is a Discord application that brings the power of a Large Language Model into your server. It can summarize conversations, answer questions and fulfill requests with full chat context and web search capabilities.
 
 ![Summaru Demo](./assets/summaru-demo.gif)
 
@@ -31,10 +31,10 @@ Ever been away from Discord for a day and come back to thousands of unread messa
 
 **Summaru is designed for both.**
 
-It acts as your server's AI-powered swiss army knife, capable of parsing past conversations to catch you up and engaging with current ones to **fulfill any request**. It can function as two distinct tools:
+It acts as your server's swiss army knife, capable of parsing past conversations to catch you up and engaging with current ones to **fulfill any request**. It can function as two distinct tools:
 
 1. **For catching up:** A **Summarizer** that condenses vast amounts of chat history into concise, scannable bullet points.
-2.  **For everything else:** There's... the **AI Assistant**, ready to answer questions, settle debates, or fulfill requests using the conversation context, its own knowledge, and web search capabilities.
+2.  **For everything else:** An **AI Assistant**, ready to answer questions, settle debates, and fulfill requests using the conversation context, its own knowledge, and web search capabilities.
 
 The bot is highly configurable, allowing you to change its core personality and behavior with ease. See the [**Configuration section**](#️-configuration) for more details.
 
@@ -48,7 +48,7 @@ The core architecture is built with node.js and discord.js, and was designed to 
 
 Summaru comes loaded with features designed to save you time, boost engagement, and unleash creativity in your server.
 
-*   **Catch Up Instantly:** Use the `/summarize` command to get a quick bullet point summary of the last 100 (or 20k) messages, the last X hours, or everything since you last spoke. Never feel out of the loop again.
+*   **Catch Up Instantly:** Use the `/summarize` command to get a quick bullet point summary of the last 100 (or 10k) messages, the last X hours, or everything since you last spoke. Never feel out of the loop again.
 *   **Go Beyond Summaries:** Use the `/ask` command to ask for **anything**. Ask it to weigh in on a discussion, roast your friends, fetch the latest news or even decide what game you're all playing tonight so you can stop arguing.
 *   **Privacy First:** Responses are delivered privately to you by default. If you get a result worth sharing, you can make it public for the whole channel with a single click.
 *   **Fast as can be:** Receive a response within seconds thanks to a custom caching system. The only delay is how long the LLM itself takes to answer.
