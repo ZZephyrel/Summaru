@@ -5,7 +5,6 @@
 ![discord.js](https://img.shields.io/badge/discord.js-14.22.1-blue.svg)
 ![@google/genai](https://img.shields.io/badge/@google/genai-1.22.0-blue.svg)
 ![dotenv](https://img.shields.io/badge/dotenv-16.5.0-blue.svg)
-<a href="https://ko-fi.com/zzephyrel">![Support](https://img.shields.io/static/v1?label=♥&message=Support&color=EA4AAA&style=flat)</a>
 
 **Summaru** is a Discord application that brings the power of a Large Language Model into your server. It can summarize conversations, answer questions and fulfill requests with full chat context and web search capabilities.
 
@@ -20,7 +19,6 @@
 - [⚙️ Configuration](#️-configuration)
 - [☁️ Hosting](#️-hosting)
 - [🛡️ Data Privacy, Usage & Security Disclaimer](#️-data-privacy-usage--security-disclaimer)
-- [💖 Support the Project](#-support-the-project)
 - [🏛️ Architecture Highlights](#️-architecture-highlights)
 - [📄 License](#-license)
 
@@ -358,14 +356,6 @@ You can also block the bot from **viewing** a channel.
 
 > [!TIP]
 > If you do this **without** disabling the commands as in Method 1, then users will still be able to use the `/ask now` subcommand **privately**. This command **does not expose any sensitive data from the chat history**, just the request to the AI. This is a great way to allow users to **privately ask general questions without giving the bot access to conversation history**.
-
-## 💖 Support the Project
-
-Summaru is a passion project, developed and maintained in my free time. If you and your community find Summaru valuable, please consider showing your appreciation and supporting its development.
-
-Every contribution is greatly appreciated!
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/zzephyrel)
 
 ## 🏛️ Architecture Highlights
 
