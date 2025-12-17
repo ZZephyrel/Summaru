@@ -12,12 +12,13 @@ const TEST_GUILD_ID = process.env.TEST_GUILD_ID;
 
 // Defines the available Gemini models and their current status. The order of models in this Map determines the fallback priority.
 const models = new Map([
+    ['gemini-3-flash-preview', { availableAfter: 0, failCount: 0 }],
     ['gemini-2.5-flash-preview-09-2025', { availableAfter: 0, failCount: 0 }],
     ['gemini-2.5-pro', { availableAfter: 0, failCount: 0 }],
     ['gemini-2.5-flash-lite-preview-09-2025', { availableAfter: 0, failCount: 0 }],
     ['gemini-2.0-flash', { availableAfter: 0, failCount: 0 }],
     ['gemini-2.0-flash-lite', { availableAfter: 0, failCount: 0 }]
-])
+]);
 /*
  * Available safety thresholds for the Gemini API.
  * Set the 'threshold' for each category to one of the following string values:
@@ -82,7 +83,7 @@ const RATE_LIMIT_CLEANUP_INTERVAL_MS = 2 * 60 * 60 * 1000; // Prevent memory lea
 const CACHE_SIZE_PER_CHANNEL = MAX_MESSAGES; // The max number of messages to keep in memory per channel.
 const CACHE_POPULATION_PROPORTION = 1; // Fetch proportion of the max cache size on bot startup. Range: 0 to 1.
 const CACHE_POPULATION_AMOUNT = Math.min(Math.ceil(CACHE_SIZE_PER_CHANNEL * CACHE_POPULATION_PROPORTION), CACHE_SIZE_PER_CHANNEL);
-const CACHE_MAX_FETCH = CACHE_POPULATION_AMOUNT * 2 // Hard cap on fetch needed in case a channel is full of bot only messages.
+const CACHE_MAX_FETCH = CACHE_POPULATION_AMOUNT * 2; // Hard cap on fetch needed in case a channel is full of bot only messages.
 
 // --- PROMPT CONFIGURATION ---
 // The main system prompt that defines the AI's personality and behavior for the /summarize command.
@@ -95,7 +96,7 @@ If asked for personal opinions, thoughts or similar things, express actual opini
 
 **IMPORTANT: Produce short and to-the-point responses. Do not include any preamble before the response. The goal is to efficiently condense the conversation.
 This also means the length of the response should be relative to the length of the chat and always condense it significantly. Never exceed a one-minute read.
-User attention is fickle so you must aim for maximum information and engagement per word.**`
+User attention is fickle so you must aim for maximum information and engagement per word.**`;
 
 // Assembles the final prompt sent to the model for the /summarize command.
 function generateSummarizePrompt(formattedHistory, customInstructions) {
@@ -128,7 +129,7 @@ Also use your own knowledge and judgement when answering requests that are not s
 You can search the web when appropriate. Maintain a conversational tone. Express yourself freely.
 If asked for personal opinions, thoughts or similar things, express actual opinions. In essence make sure to have a personality.
 **Do not cite conversation timestamps, they are for your understanding only**.
-Use clean formatting. Don't use tables or horizontal rules for formatting, they are not supported. **Prioritize short and to-the-point responses.**`
+Use clean formatting. Don't use tables or horizontal rules for formatting, they are not supported. **Prioritize short and to-the-point responses.**`;
 
 // Assembles the final prompt sent to the model for the /ask command.
 function generateAskPrompt(formattedHistory, userRequest) {
