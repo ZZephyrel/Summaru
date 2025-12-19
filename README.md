@@ -2,9 +2,9 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)
 ![Node.js](https://img.shields.io/badge/node.js->=20.0.0-blue.svg)
-![discord.js](https://img.shields.io/badge/discord.js-14.22.1-blue.svg)
-![@google/genai](https://img.shields.io/badge/@google/genai-1.22.0-blue.svg)
-![dotenv](https://img.shields.io/badge/dotenv-16.5.0-blue.svg)
+![discord.js](https://img.shields.io/badge/discord.js-blue.svg)
+![@google/genai](https://img.shields.io/badge/@google/genai-blue.svg)
+![dotenv](https://img.shields.io/badge/dotenv-blue.svg)
 
 **Summaru** is a Discord application that brings the power of a Large Language Model into your server. It can summarize conversations, answer questions and fulfill requests with full chat context and web search capabilities.
 

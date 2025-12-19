@@ -40,7 +40,7 @@ const safetySettingsConfig = [
 const RATE_LIMIT_KEYWORDS = ['429', 'RESOURCE_EXHAUSTED', '503', 'OVERLOADED'];
 
 // --- MODEL PARAMETERS ---
-const TEMPERATURE = 0.5; // Lower values lead to more accurate responses, higher values lead to more diversity in responses. Range: 0 to 2.
+const TEMPERATURE = 1; // Lower values lead to more accurate responses, higher values lead to more diversity in responses. Range: 0 to 2.
 const MAX_OUTPUT_TOKENS = 4000; // Upper limit on response tokens, important for latency and cost management.
 const GROUNDING_TOOL = { googleSearch: {} }; // Enables the AI to use Google Search to answer questions with up-to-date information.
 const MODEL_SHORT_COOLDOWN_MS = 1.2 * 60 * 1000; // Short penalty applied to a model after a single rate-limit failure, meant to handle per minute limits.
