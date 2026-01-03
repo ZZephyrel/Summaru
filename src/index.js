@@ -101,7 +101,7 @@ function handleMessageUpdate(newMessage) {
 }
 
 function handleMessageDelete(message) {
-    messageCache.get(message.channelId)?.delete(message.id)
+    messageCache.get(message.channelId)?.delete(message.id);
 }
 
 function handleMessageDeleteBulk(messages, channel) {
@@ -354,7 +354,7 @@ client.on('interactionCreate', async interaction => {
                 // Fetch the rest from the API
                 if (chatHistory.size < count) { // count should always be at most MAX_MESSAGES via deploy-commands.js
                     // Reasonable upper fetch limit to account for channels with mostly bot messages
-                    const fetchLoops = Math.ceil(Math.max((MAX_MESSAGES - chatHistory.size) * FETCH_BUFFER_MULTIPLIER, FETCH_LOWER_LIMIT) / MESSAGES_PER_FETCH)
+                    const fetchLoops = Math.ceil(Math.max((MAX_MESSAGES - chatHistory.size) * FETCH_BUFFER_MULTIPLIER, FETCH_LOWER_LIMIT) / MESSAGES_PER_FETCH);
                     outer: for (let i = 0; i < fetchLoops; i++) {
                         const batch = await channel.messages.fetch({ limit: MESSAGES_PER_FETCH, before: lastId });
                         if (batch.size === 0) break;
@@ -391,7 +391,7 @@ client.on('interactionCreate', async interaction => {
                 if (chatHistory.size > 0) lastId = chatHistory.last().id;
                 console.log(`[CACHE HIT - days/hours] Collected ${chatHistory.size} messages from cache.`);
                 if ((!lastId || chatHistory.last().createdTimestamp > targetTimestamp) && chatHistory.size < MAX_MESSAGES) {
-                    const fetchLoops = Math.ceil(Math.max((MAX_MESSAGES - chatHistory.size) * FETCH_BUFFER_MULTIPLIER, FETCH_LOWER_LIMIT) / MESSAGES_PER_FETCH)
+                    const fetchLoops = Math.ceil(Math.max((MAX_MESSAGES - chatHistory.size) * FETCH_BUFFER_MULTIPLIER, FETCH_LOWER_LIMIT) / MESSAGES_PER_FETCH);
                     outer: for (let i = 0; i < fetchLoops; i++) {
                         const batch = await channel.messages.fetch({ limit: MESSAGES_PER_FETCH, before: lastId });
                         if (batch.size === 0) break;
@@ -407,30 +407,37 @@ client.on('interactionCreate', async interaction => {
                     }
                 }
             } else if (subcommand === 'since_last') {
-                fetchDetails = "Messages since your last message";
+                let ignore = options.getInteger('ignore') ?? 0;
+                fetchDetails = ignore > 0 ? `Messages since your last message (skipping ${ignore})` : "Messages since your last message";
                 let userLastMessageId = null;
                 let lastId;
 
                 const reversedCache = [...channelCache.values()].reverse();
                 for (const message of reversedCache) {
                     if (message.author.id === user.id) {
-                        userLastMessageId = message.id;
-                        break;
+                        if (ignore <= 0) {
+                            userLastMessageId = message.id;
+                            break;
+                        }
+                        ignore--;
                     }
                     chatHistory.set(message.id, message);
                 }
                 if (chatHistory.size > 0) lastId = chatHistory.last().id;
                 console.log(`[CACHE HIT - since_last] Collected ${chatHistory.size} messages from cache.`);
                 if (userLastMessageId === null && chatHistory.size < MAX_MESSAGES) {
-                    const fetchLoops = Math.ceil(Math.max((MAX_MESSAGES - chatHistory.size) * FETCH_BUFFER_MULTIPLIER, FETCH_LOWER_LIMIT) / MESSAGES_PER_FETCH)
+                    const fetchLoops = Math.ceil(Math.max((MAX_MESSAGES - chatHistory.size) * FETCH_BUFFER_MULTIPLIER, FETCH_LOWER_LIMIT) / MESSAGES_PER_FETCH);
                     outer: for (let i = 0; i < fetchLoops; i++) {
                         const batch = await channel.messages.fetch({ limit: MESSAGES_PER_FETCH, before: lastId });
                         if (batch.size === 0) break;
 
                         for (const message of batch.values()) {
                             if (message.author?.id === user.id) {
-                                userLastMessageId = message.id;
-                                break outer;
+                                if (ignore <= 0) {
+                                    userLastMessageId = message.id;
+                                    break outer;
+                                }
+                                ignore--;
                             }
                             if (chatHistory.size >= MAX_MESSAGES) break outer;
                             if (isValidMessage(message)) chatHistory.set(message.id, createMinimalMessage(message));

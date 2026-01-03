@@ -67,6 +67,13 @@ const commands = [
                     option.setName('instructions')
                         .setDescription('Special instructions for the summary.')
                         .setRequired(false))
+                .addIntegerOption(option =>
+                    option.setName('ignore')
+                        .setDescription('Number of your recent messages to ignore')
+                        .setMinValue(1)
+                        .setMaxValue(100)
+                        .setRequired(false)
+                )
                 .addBooleanOption(option =>
                     option.setName('public')
                         .setDescription('Share the summary publicly? (Default: False)')
@@ -148,6 +155,13 @@ const commands = [
                     option.setName('request')
                         .setDescription('Your question or instruction for the AI.')
                         .setRequired(true))
+                .addIntegerOption(option =>
+                    option.setName('ignore')
+                        .setDescription('Number of your recent messages to ignore')
+                        .setMinValue(1)
+                        .setMaxValue(100)
+                        .setRequired(false)
+                )
                 .addBooleanOption(option =>
                     option.setName('public')
                         .setDescription('Share the response publicly? (Default: False)')
