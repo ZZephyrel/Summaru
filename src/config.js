@@ -15,7 +15,6 @@ const models = new Map([
     ['gemini-3-flash-preview', { availableAfter: 0, failCount: 0 }],
     ['gemini-2.5-flash-preview-09-2025', { availableAfter: 0, failCount: 0 }],
     ['gemini-2.5-flash-lite-preview-09-2025', { availableAfter: 0, failCount: 0 }],
-    ['gemma-3-27b', { availableAfter: 0, failCount: 0 }],
     ['gemini-2.5-pro', { availableAfter: 0, failCount: 0 }],
 ]);
 /*
