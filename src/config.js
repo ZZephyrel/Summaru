@@ -14,10 +14,9 @@ const TEST_GUILD_ID = process.env.TEST_GUILD_ID;
 const models = new Map([
     ['gemini-3-flash-preview', { availableAfter: 0, failCount: 0 }],
     ['gemini-2.5-flash-preview-09-2025', { availableAfter: 0, failCount: 0 }],
-    ['gemini-2.5-pro', { availableAfter: 0, failCount: 0 }],
     ['gemini-2.5-flash-lite-preview-09-2025', { availableAfter: 0, failCount: 0 }],
-    ['gemini-2.0-flash', { availableAfter: 0, failCount: 0 }],
-    ['gemini-2.0-flash-lite', { availableAfter: 0, failCount: 0 }]
+    ['gemma-3-27b', { availableAfter: 0, failCount: 0 }],
+    ['gemini-2.5-pro', { availableAfter: 0, failCount: 0 }],
 ]);
 /*
  * Available safety thresholds for the Gemini API.
