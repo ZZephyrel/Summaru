@@ -43,11 +43,14 @@ const MAX_OUTPUT_TOKENS = 4000; // Upper limit on response tokens, important for
 const GROUNDING_TOOL = { googleSearch: {} }; // Enables the AI to use Google Search to answer questions with up-to-date information.
 const MODEL_SHORT_COOLDOWN_MS = 1.2 * 60 * 1000; // Short penalty applied to a model after a single rate-limit failure, meant to handle per minute limits.
 const MODEL_LONG_COOLDOWN_MS = 3 * 60 * 60 * 1000; // Long penalty applied to a model after repeated rate-limit failures.
+const SUCCESS_FINISH_REASONS = new Set(['STOP', 'MAX_TOKENS']); // These signal a successful generation.
+const HARD_STOP_FINISH_REASONS = new Set(['SAFETY', 'RECITATION', 'BLOCKLIST', 'PROHIBITED_CONTENT', 'SPII', 'IMAGE_SAFETY']); // Will not retry request for these.
 
 // --- BOT BEHAVIOR & LIMITS ---
 const EMBED_COLOR = 0x0099FF;
 const MAX_CHARS_PER_EMBED = 4096; // Discord limit. Do not change unless you know what you're doing.
 const MESSAGES_PER_FETCH = 100; // Discord API limit. Do not change unless you know what you're doing.
+const CONVERSATION_TTL_MS = 12 * 60 * 60 * 1000; // The amount of time after which an idle convo is removed from conversationCache.
 
 /* 
  * Context gathering limits. Adjust these to control how much chat history a user can provide to the LLM.
@@ -55,7 +58,7 @@ const MESSAGES_PER_FETCH = 100; // Discord API limit. Do not change unless you k
  */
 const MAX_DAYS = 365; // Re-deploy commands when you change this.
 const MAX_HOURS = MAX_DAYS * 24; // Re-deploy commands when you change this.
-const MAX_MESSAGES = 30000; // Re-deploy commands when you change this.
+const MAX_MESSAGES = 10000; // Re-deploy commands when you change this.
 
 /*
  * Multiplier to allow fetching more messages than strictly requested to account for invalid ones.
@@ -170,9 +173,12 @@ export {
     GROUNDING_TOOL,
     MODEL_SHORT_COOLDOWN_MS,
     MODEL_LONG_COOLDOWN_MS,
+    SUCCESS_FINISH_REASONS,
+    HARD_STOP_FINISH_REASONS,
     EMBED_COLOR,
     MAX_CHARS_PER_EMBED,
     MESSAGES_PER_FETCH,
+    CONVERSATION_TTL_MS,
     MAX_DAYS,
     MAX_HOURS,
     MAX_MESSAGES,

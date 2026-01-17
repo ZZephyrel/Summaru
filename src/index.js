@@ -9,9 +9,12 @@ import {
     GROUNDING_TOOL,
     MODEL_SHORT_COOLDOWN_MS,
     MODEL_LONG_COOLDOWN_MS,
+    SUCCESS_FINISH_REASONS,
+    HARD_STOP_FINISH_REASONS,
     EMBED_COLOR,
     MAX_CHARS_PER_EMBED,
     MESSAGES_PER_FETCH,
+    CONVERSATION_TTL_MS,
     MAX_MESSAGES,
     FETCH_BUFFER_MULTIPLIER,
     FETCH_LOWER_LIMIT,
@@ -61,32 +64,175 @@ const genAI = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 /**
  * Caches recent messages for each channel to avoid API calls.
- * The key is the channel ID, and the value is a LimitedCollection of messages.
+ * Key: channel ID, Value: LimitedCollection of messages.
  * @type {Map<string, LimitedCollection>}
  */
 const messageCache = new Map();
 
 /**
  * Tracks command timestamps for each user to enforce rate limits.
- * The key is the user ID, and the value is an array of timestamps.
+ * Key: user ID, Value: array of timestamps.
  * @type {Map<string, number[]>}
  */
 const userRateLimits = new Map();
 
+/**
+ * Caches conversation history to allow replies.
+ * Key: Message ID (of the Bot's message), 
+ * Value: { history: Array, systemInstruction: String, originalAuthorId: String, lastActive: Number (timestamp) }
+ */
+const conversationCache = new Map();
+
 let isCacheReady = false; // Events and interactions depending on the cache are deferred until this is true.
 let pendingEvents = []; // This queue holds events that arrive during startup.
 
-// All other model response finish reasons are treated as 'soft failures, aka we try the next available model.
-const SUCCESS_FINISH_REASONS = new Set(['STOP', 'MAX_TOKENS']);
-const HARD_STOP_FINISH_REASONS = new Set(['SAFETY', 'RECITATION', 'BLOCKLIST', 'PROHIBITED_CONTENT', 'SPII', 'IMAGE_SAFETY']);
+
+/**
+ * Checks if a user is rate limited.
+ * Returns { restricted: boolean, timeLeft: number }
+ */
+function checkUserRateLimit(userId) {
+    const now = Date.now();
+    const userTimestamps = userRateLimits.get(userId) || [];
+    const recentTimestamps = userTimestamps.filter(ts => now - ts < USER_RATE_LIMIT_WINDOW_MS);
+
+    if (recentTimestamps.length >= USER_RATE_LIMIT_COUNT) {
+        const oldestRecentTimestamp = recentTimestamps[0];
+        const cooldownEnds = oldestRecentTimestamp + USER_RATE_LIMIT_WINDOW_MS;
+        return { restricted: true, timeLeft: Math.ceil((cooldownEnds - now) / 1000) };
+    }
+
+    recentTimestamps.push(now);
+    userRateLimits.set(userId, recentTimestamps);
+    return { restricted: false, timeLeft: 0 };
+}
+
+async function generateChatResponse(history, currentMessage, systemInstruction) {
+    let responseText = '';
+    let successfulModelName = '';
+    let newHistory = [];
+    let promptTooLarge = false;
+
+    // Try each model until one succeeds
+    for (const [modelName, status] of models.entries()) {
+        if (status.availableAfter > Date.now()) {
+            console.log(`[Model Switcher] Skipping ${modelName}, it's on cooldown.`);
+            continue;
+        }
+        /* 
+        Flags to prevent doubly penalizing a model due to concurrency.
+        I believe only one of them is necessary given the nature of the js event loop (aka the catch block will execute atomically).
+        I'm using both to show that these point to a single consistent state.
+        */
+        const availableWhenStarted = status.availableAfter;
+        const failCountWhenStarted = status.failCount;
+
+        try {
+            console.log(`[Model Switcher] Attempting to use model: ${modelName} (Chat Mode)`);
+            // Create the Chat instance
+            const chat = genAI.chats.create({
+                model: modelName,
+                history: history, // Pass the previous history turns
+                config: {
+                    systemInstruction: systemInstruction,
+                    maxOutputTokens: MAX_OUTPUT_TOKENS,
+                    temperature: TEMPERATURE,
+                    safetySettings: safetySettingsConfig,
+                    tools: [GROUNDING_TOOL],
+                },
+            });
+
+            // Send the new message.
+            const generationResponse = await chat.sendMessage({
+                message: currentMessage
+            });
+
+            // Check if the prompt itself was blocked.
+            const promptBlockReason = generationResponse.promptFeedback?.blockReason;
+            if (promptBlockReason) {
+                console.warn(`[SAFETY BLOCK] Prompt was blocked. Details:`, generationResponse.promptFeedback);
+                return { error: `The input conversation or your instructions were flagged for **${promptBlockReason}**.` };
+            }
+
+            const candidate = generationResponse.candidates?.[0];
+            const finishReason = candidate?.finishReason;
+            const safetyRatings = candidate?.safetyRatings;
+
+            // Check if response finished for unsafe reason.
+            if (HARD_STOP_FINISH_REASONS.has(finishReason)) {
+                console.warn(`[SAFETY BLOCK] ${modelName} response was blocked. Details:`, {
+                    finishReason: finishReason,
+                    safetyRatings: safetyRatings,
+                });
+                return { error: `The generated response was flagged for **${finishReason}**.` };
+            }
+
+            // Check if response finished successfully.
+            if (!SUCCESS_FINISH_REASONS.has(finishReason)) {
+                console.warn(`[Model Switcher] ${modelName} response finished unexpectedly. Details:`, {
+                    finishReason: finishReason,
+                    safetyRatings: safetyRatings,
+                });
+                continue; // Try next model.
+            }
+
+            responseText = generationResponse.text;
+            if (responseText == null) { // Google API just does this sometimes.
+                console.warn("Something went wrong. API reported success but returned null or undefined");
+                continue;
+            }
+
+            // Successful response.
+            console.log(`[Model Switcher] Success with ${modelName}!`);
+            successfulModelName = modelName;
+
+            newHistory = chat.getHistory();
+
+            // Reset cooldowns and exit loop.
+            status.availableAfter = 0;
+            status.failCount = 0;
+            break;
+        } catch (error) {
+            const errorMessage = (error.message || '').toUpperCase();
+            if (errorMessage.includes('INPUT_TOKEN_COUNT') || errorMessage.includes('INPUT TOKEN COUNT')) {
+                console.warn(`[Model Switcher] ${modelName} context window too small. Trying next model.`);
+                promptTooLarge = true;
+                continue; // No penalty. Just move on to the next model.
+            }
+            promptTooLarge = false;
+
+            if (RATE_LIMIT_KEYWORDS.some(keyword => errorMessage.includes(keyword))) { // Too many requests
+                if (status.availableAfter > availableWhenStarted || status.failCount > failCountWhenStarted) {
+                    console.warn(`[Model Switcher] ${modelName} already penalized. Skipping.`);
+                    continue;
+                }
+                status.failCount++;
+                const cooldownDuration = (status.failCount > 1) ? MODEL_LONG_COOLDOWN_MS : MODEL_SHORT_COOLDOWN_MS;
+                status.availableAfter = Date.now() + cooldownDuration;
+                console.warn(`[Model Switcher] ${modelName} rate-limited. Penalty applied.`);
+                continue;
+            }
+            console.error(`[Model Switcher] Error with ${modelName}:`, error);
+        }
+    }
+
+    if (!successfulModelName) {
+        if (promptTooLarge) return { error: "The conversation is too long for the available models." };
+        return { error: "All AI models are currently busy or rate-limited. Please try again later." };
+    }
+
+    return { text: responseText, newHistory, modelName: successfulModelName };
+}
 
 function handleMessageCreate(message) {
     if (!isValidMessage(message)) return;
+
     const channelCache = messageCache.get(message.channelId) || messageCache.set(message.channelId, new LimitedCollection({ maxSize: CACHE_SIZE_PER_CHANNEL })).get(message.channelId);
     if (!channelCache.has(message.id)) {
         channelCache.set(message.id, createMinimalMessage(message));
     }
 }
+
 
 function handleMessageUpdate(newMessage) {
     const channelCache = messageCache.get(newMessage.channelId);
@@ -115,6 +261,64 @@ function handleMessageDeleteBulk(messages, channel) {
 
 function handleChannelDelete(channel) {
     messageCache.delete(channel.id) && console.log(`[CACHE SWEEP] Removed cache for channel #${channel.name} (${channel.id}) as it was deleted.`);
+}
+
+async function handleBotReply(message) {
+    if (message.reference && message.reference.messageId) {
+        const conversationContext = conversationCache.get(message.reference.messageId);
+
+        if (conversationContext) {
+
+            const rateLimit = checkUserRateLimit(message.author.id);
+            if (rateLimit.restricted) {
+                await message.reply({
+                    content: `You are replying too quickly. Please wait **${rateLimit.timeLeft}** second(s).`,
+                    allowedMentions: { repliedUser: true }
+                });
+                return;
+            }
+
+            await message.channel.sendTyping();
+
+            const response = await generateChatResponse(
+                conversationContext.history,
+                message.content,
+                askSystemInstruction // askSystemInstruction seems to better for replies in general. Use conversationContext.systemInstruction if you want to keep it consistent.
+            );
+
+            if (response.error) {
+                await message.reply(response.error);
+                return;
+            }
+
+            let descriptionContent = response.text;
+            if (descriptionContent.length > MAX_CHARS_PER_EMBED) {
+                descriptionContent = descriptionContent.substring(0, MAX_CHARS_PER_EMBED - 3) + '...';
+            }
+
+            const replyEmbed = new EmbedBuilder()
+                .setColor(EMBED_COLOR)
+                .setDescription(descriptionContent)
+                .setTimestamp()
+                .setFooter({ text: `Reply to ${message.author.displayName} • Made with ${response.modelName}`, iconURL: message.author.displayAvatarURL() });
+
+            try {
+                const botReply = await message.reply({ embeds: [replyEmbed], allowedMentions: { repliedUser: true } });
+
+                // Update Cache with new Message ID and new History.
+                // This allows the user to reply to this message and continue the chain.
+                conversationCache.set(botReply.id, {
+                    history: response.newHistory,
+                    systemInstruction: conversationContext.systemInstruction,
+                    originalAuthorId: message.author.id,
+                    lastActive: Date.now()
+                });
+
+            } catch (err) {
+                console.error("Failed to send reply:", err);
+            }
+        }
+    }
 }
 
 async function populateChannel(channel, guild) {
@@ -200,6 +404,7 @@ client.once('clientReady', async () => {
 });
 
 client.on('messageCreate', message => {
+    handleBotReply(message);
     if (isCacheReady) {
         handleMessageCreate(message);
     } else {
@@ -259,7 +464,17 @@ client.on('interactionCreate', async interaction => {
                     return;
                 }
 
-                await interaction.channel.send({ embeds: [originalEmbed] });
+                const publicMessage = await interaction.channel.send({ embeds: [originalEmbed] });
+
+                // Transfer Conversation Context 
+                const existingContext = conversationCache.get(interaction.message.id);
+                if (existingContext) {
+                    existingContext.lastActive = Date.now();
+                    conversationCache.set(publicMessage.id, existingContext);
+
+                    // Clean up the old ephemeral ID to save memory
+                    conversationCache.delete(interaction.message.id);
+                }
 
                 await interaction.deleteReply();
             }
@@ -298,38 +513,21 @@ client.on('interactionCreate', async interaction => {
                 return;
             }
 
-            // --- START RATE LIMIT LOGIC ---
-            const now = Date.now();
-            const userTimestamps = userRateLimits.get(user.id) || [];
-
-            // Filter out any timestamps that are outside our sliding window.
-            const recentTimestamps = userTimestamps.filter(ts => now - ts < USER_RATE_LIMIT_WINDOW_MS);
-
-            if (recentTimestamps.length >= USER_RATE_LIMIT_COUNT) {
-                const oldestRecentTimestamp = recentTimestamps[0];
-                const cooldownEnds = oldestRecentTimestamp + USER_RATE_LIMIT_WINDOW_MS;
-                const timeLeftSeconds = Math.ceil((cooldownEnds - now) / 1000);
-
-                console.log(`[RATE LIMIT] User ${user.id} was rate-limited. Try again in ${timeLeftSeconds}s.`);
-
-                await interaction.editReply({
-                    content: `You are making requests too quickly. Please try again in **${timeLeftSeconds}** second(s).`,
-                    flags: MessageFlags.Ephemeral
-                });
+            // Rate Limit Check
+            const rateLimit = checkUserRateLimit(user.id);
+            if (rateLimit.restricted) {
+                await interaction.editReply({ content: `You are making requests too quickly. Please try again in **${rateLimit.timeLeft}** second(s).`, flags: MessageFlags.Ephemeral });
                 return;
             }
 
-            // The user is clear. Add the current timestamp to their history for future checks.
-            recentTimestamps.push(now);
-            userRateLimits.set(user.id, recentTimestamps);
-            // ---  END RATE LIMIT LOGIC  ---
-
+            // Pre-flight check
             const isAnyModelAvailable = [...models.values()].some(status => Date.now() > status.availableAfter);
             if (!isAnyModelAvailable) {
                 console.log("[Pre-flight Check] Failed: All models are on cooldown.");
                 await interaction.editReply('All AI models are currently on cooldown. Please try again later.');
                 return;
             }
+
             // Initialize a Collection to store message history.
             // Note: Messages are added from newest to oldest, then reversed when formatting the history for chronological processing.
             let chatHistory = new Collection();
@@ -458,7 +656,6 @@ client.on('interactionCreate', async interaction => {
             }
 
             const formattedHistory = formatChatHistoryByDay(chatHistory, client);
-
             let prompt;
             let systemInstructionToUse;
             let request = null;
@@ -474,111 +671,11 @@ client.on('interactionCreate', async interaction => {
                 systemInstructionToUse = askSystemInstruction;
             }
 
-            let responseText = '';
-            let promptTooLarge = false;
-            let successfulModelName = '';
-            // This loop will try each model until one succeeds.
-            for (const [modelName, status] of models.entries()) {
-                if (status.availableAfter > Date.now()) {
-                    console.log(`[Model Switcher] Skipping ${modelName}, it's on cooldown.`);
-                    continue; // Go to the next model in the map.
-                }
-                /* 
-                Flags to prevent doubly penalizing a model due to concurrency.
-                I believe only one of them is necessary given the nature of the js event loop (aka the catch block will execute atomically).
-                I'm using both to show that these point to a single consistent state.
-                */
-                const availableWhenStarted = status.availableAfter;
-                const failCountWhenStarted = status.failCount;
+            // For the first interaction, 'history' is empty. The 'prompt' acts as the first user message.
+            const response = await generateChatResponse([], prompt, systemInstructionToUse);
 
-                try {
-                    console.log(`[Model Switcher] Attempting to use model: ${modelName}`);
-                    // Make the API call with the current model.
-                    const generationResponse = await genAI.models.generateContent({
-                        model: modelName,
-                        contents: prompt,
-                        config: {
-                            systemInstruction: systemInstructionToUse,
-                            maxOutputTokens: MAX_OUTPUT_TOKENS,
-                            temperature: TEMPERATURE,
-                            safetySettings: safetySettingsConfig,
-                            tools: [GROUNDING_TOOL],
-                        },
-                    });
-
-                    // Check if the prompt itself was blocked.
-                    const promptBlockReason = generationResponse.promptFeedback?.blockReason;
-                    if (promptBlockReason) {
-                        console.warn(`[SAFETY BLOCK] Prompt was blocked. Details:`, generationResponse.promptFeedback);
-                        await interaction.editReply(`The request could not be completed because the input conversation or your instructions were flagged for **${promptBlockReason}**.`);
-                        return; // Stop processing this interaction entirely.
-                    }
-
-                    // Check if response finished for unsafe reason.
-                    const candidate = generationResponse.candidates?.[0];
-                    if (HARD_STOP_FINISH_REASONS.has(candidate?.finishReason)) {
-                        console.warn(`[SAFETY BLOCK] ${modelName} response was blocked. Details:`, {
-                            finishReason: candidate?.finishReason,
-                            safetyRatings: candidate?.safetyRatings,
-                        });
-                        await interaction.editReply(`The request could not be completed because the generated response was flagged for **${candidate?.finishReason}**.`);
-                        return;
-                    }
-
-                    // Check if response finished successfully.
-                    if (!SUCCESS_FINISH_REASONS.has(candidate?.finishReason)) {
-                        console.warn(`[Model Switcher] ${modelName} response finished unexpectedly. Details:`, {
-                            finishReason: candidate?.finishReason,
-                            safetyRatings: candidate?.safetyRatings,
-                        });
-                        continue; // Failover if it wasn't.
-                    }
-
-                    // Handle a successful response.
-                    console.log(`[Model Switcher] Success with ${modelName}!`);
-                    responseText = generationResponse.text;
-                    successfulModelName = modelName;
-                    status.availableAfter = 0;
-                    status.failCount = 0;
-                    break; // Exit the loop since we have a successful summary.
-
-                } catch (error) {
-                    // Handle an error for THIS specific model.
-                    const errorMessage = (error.message || '').toUpperCase();
-                    if (errorMessage.includes('INPUT_TOKEN_COUNT') || errorMessage.includes('INPUT TOKEN COUNT')) {
-                        console.warn(`[Model Switcher] ${modelName} context window is too small for this request (input token limit). Trying next model.`);
-                        // No penalty. Just move on to the next model.
-                        promptTooLarge = true;
-                        continue;
-                    }
-                    promptTooLarge = false;
-
-                    if (RATE_LIMIT_KEYWORDS.some(keyword => errorMessage.includes(keyword))) { // Too many requests
-                        if (status.availableAfter > availableWhenStarted || status.failCount > failCountWhenStarted) {
-                            console.warn(`[Model Switcher] ${modelName} was already penalized by another concurrent request. Skipping penalty and retrying next model.`);
-                            continue;
-                        }
-                        status.failCount++;
-                        const cooldownDuration = (status.failCount > 1) ? MODEL_LONG_COOLDOWN_MS : MODEL_SHORT_COOLDOWN_MS;
-                        status.availableAfter = Date.now() + cooldownDuration;
-                        console.warn(`[Model Switcher] ${modelName} is rate-limited. Applying penalty.`);
-                        continue;
-                    } else {
-                        console.error('An unrecoverable error occurred:', error);
-                        await interaction.editReply('An error occurred with the AI model. Could not generate a summary.');
-                        return;
-                    }
-                }
-            }
-
-            // --- FINAL REPLY LOGIC ---
-
-            if (!successfulModelName) {
-                if (promptTooLarge) {
-                    await interaction.editReply("The conversation you requested is too long. Please try summarizing a smaller amount or shorter time frame.");
-                } else {
-                    await interaction.editReply('All AI models are currently busy or rate-limited. Please try again later.');
-                }
+            if (response.error) {
+                await interaction.editReply(response.error);
                 return;
             }
 
@@ -588,14 +685,13 @@ client.on('interactionCreate', async interaction => {
 
             let descriptionContent;
 
-            // Use Markdown to format the user's input at the top of the description.
             if (commandName === 'summarize' && customInstructions) {
-                descriptionContent = `**Instructions:** ${customInstructions}\n\n**Summary:**\n ${responseText}`;
+                descriptionContent = `**Instructions:** ${customInstructions}\n\n**Summary:**\n ${response.text}`;
             } else if (commandName === 'ask') {
-                descriptionContent = `**Request:** ${request}\n\n**Response:** ${responseText}`;
+                descriptionContent = `**Request:** ${request}\n\n**Response:** ${response.text}`;
             } else {
                 // For a summary with no custom instructions.
-                descriptionContent = responseText;
+                descriptionContent = response.text;
             }
 
             // The combined description is subject to the character limit.
@@ -608,13 +704,13 @@ client.on('interactionCreate', async interaction => {
                 .setTitle(title)
                 .setDescription(descriptionContent)
                 .setTimestamp()
-                .setFooter({ text: `Requested by ${user.displayName} • Made with ${successfulModelName}`, iconURL: user.displayAvatarURL() });
+                .setFooter({ text: `Requested by ${user.displayName} • Made with ${response.modelName}`, iconURL: user.displayAvatarURL() });
 
             const replyOptions = { embeds: [summaryEmbed] };
 
             if (!isPublic) {
                 const makePublicButton = new ButtonBuilder()
-                    .setCustomId(`make_public:${user.id}`) // Embed the user's ID for verification
+                    .setCustomId(`make_public:${user.id}`) // Embed the user's ID for verification (should be impossible for anyone else to click though)
                     .setLabel('Make Public')
                     .setStyle(ButtonStyle.Secondary)
                     .setEmoji('📢');
@@ -622,7 +718,16 @@ client.on('interactionCreate', async interaction => {
                 const row = new ActionRowBuilder().addComponents(makePublicButton);
                 replyOptions.components = [row];
             }
-            await interaction.editReply(replyOptions);
+
+            const responseMsg = await interaction.editReply(replyOptions);
+            if (responseMsg) {
+                conversationCache.set(responseMsg.id, {
+                    history: response.newHistory,
+                    systemInstruction: systemInstructionToUse,
+                    originalAuthorId: user.id,
+                    lastActive: Date.now()
+                });
+            }
         }
     } catch (error) {
         console.error('Error processing chat command:', error);
@@ -654,5 +759,23 @@ setInterval(() => {
         console.log(`[MAINTENANCE] Cleaned up ${cleanedCount} old entries from the user rate limit cache.`);
     }
 }, RATE_LIMIT_CLEANUP_INTERVAL_MS);
+
+// Conversation Cache Cleanup
+setInterval(() => {
+    const now = Date.now();
+    let cleanedCount = 0;
+
+    for (const [messageId, context] of conversationCache.entries()) {
+        // Check if the conversation has been idle longer than the TTL
+        if (now - context.lastActive > CONVERSATION_TTL_MS) {
+            conversationCache.delete(messageId);
+            cleanedCount++;
+        }
+    }
+
+    if (cleanedCount > 0) {
+        console.log(`[MAINTENANCE] Cleaned up ${cleanedCount} expired conversations.`);
+    }
+}, CONVERSATION_TTL_MS);
 
 client.login(DISCORD_TOKEN);
